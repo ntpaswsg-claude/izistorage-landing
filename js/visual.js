@@ -1,149 +1,124 @@
+/* visual.js — IZI Storage v2
+   Canvas animado de fondo (partículas suaves)
+*/
 (function () {
   'use strict';
 
   var canvas = document.getElementById('canvas-bg');
-  if (!canvas) return;
+  if (!canvas || !canvas.getContext) return;
 
   var ctx = canvas.getContext('2d');
-  if (!ctx) return;
+  var W = 0, H = 0;
+  var particles = [];
+  var RAF;
+  var PARTICLE_COUNT = 55;
+  var REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
-  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (prefersReducedMotion) {
+  if (REDUCED) {
     canvas.style.display = 'none';
     return;
   }
 
-  var W = 0;
-  var H = 0;
-  var nodes = [];
-  var frameId = null;
-  var isMobile = false;
-
-  var NODE_COUNT_DESKTOP = 55;
-  var NODE_COUNT_MOBILE = 22;
-  var CONNECTION_DIST = 170;
-  var CONNECTION_DIST_MOBILE = 120;
-  var SPEED_FACTOR = 0.28;
-
-  function getColor(alpha) {
-    return 'rgba(53,208,255,' + alpha + ')';
-  }
-
-  function getColorGreen(alpha) {
-    return 'rgba(44,229,155,' + alpha + ')';
-  }
-
   function resize() {
-    W = window.innerWidth;
-    H = window.innerHeight;
-    canvas.width = W;
-    canvas.height = H;
-    isMobile = W < 700;
-    buildNodes();
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
 
-  function buildNodes() {
-    var count = isMobile ? NODE_COUNT_MOBILE : NODE_COUNT_DESKTOP;
-    nodes = [];
-    for (var i = 0; i < count; i++) {
-      var useGreen = Math.random() > 0.65;
-      nodes.push({
-        x: Math.random() * W,
-        y: Math.random() * H,
-        vx: (Math.random() - 0.5) * SPEED_FACTOR,
-        vy: (Math.random() - 0.5) * SPEED_FACTOR,
-        r: Math.random() * 2.2 + 1.2,
-        pulse: Math.random() * Math.PI * 2,
-        pulseSpeed: Math.random() * 0.018 + 0.008,
-        green: useGreen,
-      });
+  function rand(a, b) { return a + Math.random() * (b - a); }
+
+  function createParticle() {
+    return {
+      x: rand(0, W),
+      y: rand(0, H),
+      r: rand(1, 2.5),
+      vx: rand(-0.18, 0.18),
+      vy: rand(-0.12, 0.12),
+      alpha: rand(0.06, 0.22)
+    };
+  }
+
+  function init() {
+    particles = [];
+    for (var i = 0; i < PARTICLE_COUNT; i++) {
+      particles.push(createParticle());
     }
   }
 
-  function drawFrame() {
+  function draw() {
     ctx.clearRect(0, 0, W, H);
 
-    var dist = isMobile ? CONNECTION_DIST_MOBILE : CONNECTION_DIST;
+    // Subtle grid lines
+    ctx.strokeStyle = 'rgba(53, 208, 255, 0.025)';
+    ctx.lineWidth = 1;
+    var step = 80;
+    for (var x = 0; x < W; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (var y = 0; y < H; y += step) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
 
-    for (var i = 0; i < nodes.length; i++) {
-      var a = nodes[i];
-      a.pulse += a.pulseSpeed;
-      a.x += a.vx;
-      a.y += a.vy;
+    // Particles
+    particles.forEach(function (p) {
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(53, 208, 255, ' + p.alpha + ')';
+      ctx.fill();
 
-      if (a.x < -10) a.x = W + 10;
-      if (a.x > W + 10) a.x = -10;
-      if (a.y < -10) a.y = H + 10;
-      if (a.y > H + 10) a.y = -10;
+      p.x += p.vx;
+      p.y += p.vy;
 
-      for (var j = i + 1; j < nodes.length; j++) {
-        var b = nodes[j];
-        var dx = a.x - b.x;
-        var dy = a.y - b.y;
-        var d = Math.sqrt(dx * dx + dy * dy);
+      if (p.x < -10) p.x = W + 10;
+      if (p.x > W + 10) p.x = -10;
+      if (p.y < -10) p.y = H + 10;
+      if (p.y > H + 10) p.y = -10;
+    });
 
-        if (d < dist) {
-          var alpha = (1 - d / dist) * 0.14;
-          var color = (a.green && b.green) ? getColorGreen(alpha) : getColor(alpha);
-
+    // Connection lines (short range only)
+    for (var i = 0; i < particles.length; i++) {
+      for (var j = i + 1; j < particles.length; j++) {
+        var dx = particles[i].x - particles[j].x;
+        var dy = particles[i].y - particles[j].y;
+        var dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < 120) {
+          var a = (1 - dist / 120) * 0.07;
           ctx.beginPath();
-          ctx.moveTo(a.x, a.y);
-          ctx.lineTo(b.x, b.y);
-          ctx.strokeStyle = color;
-          ctx.lineWidth = 0.8;
+          ctx.strokeStyle = 'rgba(53, 208, 255, ' + a + ')';
+          ctx.lineWidth = 0.5;
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
           ctx.stroke();
         }
       }
     }
 
-    for (var k = 0; k < nodes.length; k++) {
-      var n = nodes[k];
-      var pulseFactor = 0.7 + Math.sin(n.pulse) * 0.3;
-      var baseAlpha = n.green ? 0.5 : 0.45;
-      var dotColor = n.green ? getColorGreen(baseAlpha * pulseFactor) : getColor(baseAlpha * pulseFactor);
-      var glowColor = n.green ? getColorGreen(0.07) : getColor(0.08);
-
-      var glowR = n.r * 3.5;
-      var grd = ctx.createRadialGradient(n.x, n.y, 0, n.x, n.y, glowR);
-      grd.addColorStop(0, n.green ? getColorGreen(0.1) : getColor(0.12));
-      grd.addColorStop(1, n.green ? getColorGreen(0) : getColor(0));
-
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, glowR, 0, Math.PI * 2);
-      ctx.fillStyle = grd;
-      ctx.fill();
-
-      ctx.beginPath();
-      ctx.arc(n.x, n.y, n.r * pulseFactor, 0, Math.PI * 2);
-      ctx.fillStyle = dotColor;
-      ctx.fill();
-    }
-
-    frameId = requestAnimationFrame(drawFrame);
+    RAF = requestAnimationFrame(draw);
   }
 
   function start() {
     resize();
-    drawFrame();
+    init();
+    draw();
   }
 
-  var resizeTimer;
   window.addEventListener('resize', function () {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(resize, 180);
-  });
+    resize();
+    init();
+  }, { passive: true });
 
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', start);
+  } else {
+    start();
+  }
+
+  // Pause when tab hidden
   document.addEventListener('visibilitychange', function () {
     if (document.hidden) {
-      cancelAnimationFrame(frameId);
+      cancelAnimationFrame(RAF);
     } else {
-      drawFrame();
+      draw();
     }
   });
 
-  try {
-    start();
-  } catch (e) {
-    canvas.style.display = 'none';
-  }
-})();
+}());
