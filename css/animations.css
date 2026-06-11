@@ -1,0 +1,128 @@
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.75); }
+}
+
+@keyframes trust-scroll {
+  0% { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+
+@keyframes float-up {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-8px); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes toast-out {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+}
+
+@keyframes glow-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53,208,255,0); }
+  50% { box-shadow: 0 0 20px 4px rgba(53,208,255,0.18); }
+}
+
+@keyframes border-flow {
+  0%, 100% { border-color: var(--color-border-accent); }
+  50% { border-color: rgba(53,208,255,0.6); }
+}
+
+@keyframes badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(53,208,255,0); }
+  50% { box-shadow: 0 0 0 6px rgba(53,208,255,0.06); }
+}
+
+.dashboard-mockup {
+  animation: float-up 6s ease-in-out infinite;
+}
+
+.btn-primary {
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 30%, rgba(255,255,255,0.1) 50%, transparent 70%);
+  background-size: 200% auto;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.btn-primary:hover::after {
+  opacity: 1;
+  animation: shimmer 1.5s ease infinite;
+}
+
+.hero-badge {
+  animation: badge-pulse 3s ease infinite;
+}
+
+.flow-node-circle {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+.flow-node-circle:nth-child(3) { animation-delay: 0.6s; }
+.flow-node-circle:nth-child(5) { animation-delay: 1.2s; }
+.flow-node-circle:nth-child(7) { animation-delay: 1.8s; }
+.flow-node-circle:nth-child(9) { animation-delay: 2.4s; }
+
+.mock-activity-dot {
+  animation: pulse-dot 2s ease infinite;
+}
+
+.mock-activity-item:nth-child(2) .mock-activity-dot { animation-delay: 0.5s; }
+.mock-activity-item:nth-child(3) .mock-activity-dot { animation-delay: 1s; }
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .scroll-reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .dashboard-mockup {
+    animation: none;
+  }
+
+  .trust-track {
+    animation: none;
+  }
+
+  #canvas-bg {
+    display: none;
+  }
+}
