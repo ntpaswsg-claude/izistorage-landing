@@ -1,145 +1,169 @@
+/* forms.js — IZI Storage v2
+   Formulario de demo, validación, toast, WhatsApp
+   EDITAR: WHATSAPP_PHONE y WHATSAPP_MSG
+*/
 (function () {
   'use strict';
 
-  // ── CONFIGURACIÓN — editar aquí antes de publicar ─────────────────────────
-  var WHATSAPP_PHONE = '56912345678'; // Sin + ni espacios (ej: 56912345678)
-  var WHATSAPP_MSG   = 'Hola, me interesa conocer más sobre IZI Storage para mi operación. ¿Pueden darme más información?';
-  // ─────────────────────────────────────────────────────────────────────────
+  /* ===== CONFIGURACIÓN ===== */
+  var WHATSAPP_PHONE = '56912345678'; // <— Cambia por el número real
+  var WHATSAPP_MSG   = 'Hola%2C+quiero+saber+m%C3%A1s+sobre+IZI+Storage';
 
-  function showToast(message, type) {
-    type = type || 'success';
-    var container = document.getElementById('toast-container');
-    if (!container) return;
+  /* ===== UTILIDADES ===== */
+  function $(sel) { return document.querySelector(sel); }
+  function $$(sel) { return document.querySelectorAll(sel); }
 
-    var toast = document.createElement('div');
-    toast.className = 'toast toast-' + type;
-    toast.setAttribute('role', 'alert');
-    toast.setAttribute('aria-live', 'polite');
-
-    var iconSvg = type === 'success'
-      ? '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>'
-      : '<svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 5v4m0 2.5h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
-
-    toast.innerHTML =
-      '<div class="toast-icon">' + iconSvg + '</div>' +
-      '<div class="toast-message">' + message + '</div>';
-
-    container.appendChild(toast);
-
+  function showToast(msg, isError) {
+    var toast = $('#form-toast');
+    if (!toast) return;
+    toast.textContent = msg;
+    toast.classList.toggle('toast--error', !!isError);
+    toast.classList.add('toast--visible');
     setTimeout(function () {
-      toast.classList.add('toast-exit');
-      setTimeout(function () {
-        if (toast.parentNode) toast.parentNode.removeChild(toast);
-      }, 320);
-    }, 4500);
+      toast.classList.remove('toast--visible');
+    }, 4000);
   }
 
-  function validateEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+  function isValidEmail(val) {
+    return /^[^s@]+@[^s@]+.[^s@]+$/.test(val);
   }
 
-  function clearErrors(form) {
-    form.querySelectorAll('.form-input, .form-select, .form-textarea').forEach(function (field) {
-      field.classList.remove('error');
-    });
-    form.querySelectorAll('.form-error').forEach(function (el) {
-      el.classList.remove('visible');
-    });
+  function markError(input, msg) {
+    input.classList.add('input--error');
+    var existing = input.parentNode.querySelector('.form-error-msg');
+    if (!existing) {
+      var el = document.createElement('span');
+      el.className = 'form-error-msg';
+      el.setAttribute('role', 'alert');
+      el.textContent = msg;
+      input.parentNode.appendChild(el);
+    }
   }
 
-  function setError(field, errorEl) {
-    field.classList.add('error');
-    if (errorEl) errorEl.classList.add('visible');
+  function clearError(input) {
+    input.classList.remove('input--error');
+    var err = input.parentNode.querySelector('.form-error-msg');
+    if (err) err.remove();
   }
 
-  function validateForm(form) {
-    var valid = true;
-    clearErrors(form);
-
-    var required = form.querySelectorAll('[required]');
-    required.forEach(function (field) {
-      var val = field.value.trim();
-      if (!val) {
-        var errorEl = form.querySelector('[data-error="' + field.name + '"]');
-        setError(field, errorEl);
-        valid = false;
-      }
+  /* ===== FORMULARIO DEMO ===== */
+  var form = $('#demo-form');
+  if (form) {
+    // Clear on input
+    form.querySelectorAll('.form-input').forEach(function (inp) {
+      inp.addEventListener('input', function () { clearError(inp); });
+      inp.addEventListener('change', function () { clearError(inp); });
     });
 
-    var emailFields = form.querySelectorAll('input[type="email"]');
-    emailFields.forEach(function (field) {
-      if (field.value.trim() && !validateEmail(field.value)) {
-        var errorEl = form.querySelector('[data-error="' + field.name + '"]');
-        setError(field, errorEl);
-        valid = false;
-      }
-    });
-
-    return valid;
-  }
-
-  function resetForm(form) {
-    form.reset();
-    clearErrors(form);
-  }
-
-  function initDemoForm(form) {
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      if (!validateForm(form)) return;
+      var ok = true;
 
-      var submitBtn = form.querySelector('[type="submit"]');
-      var originalText = submitBtn ? submitBtn.textContent : '';
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Enviando...';
+      var nombre   = $('#f-nombre');
+      var empresa  = $('#f-empresa');
+      var email    = $('#f-email');
+      var whatsapp = $('#f-whatsapp');
+      var op       = $('#f-operacion');
+      var prob     = $('#f-problema');
+
+      [nombre, empresa, email, whatsapp, op, prob].forEach(clearError);
+
+      if (!nombre.value.trim()) {
+        markError(nombre, 'Ingresa tu nombre'); ok = false;
+      }
+      if (!empresa.value.trim()) {
+        markError(empresa, 'Ingresa el nombre de tu empresa'); ok = false;
+      }
+      if (!email.value.trim() || !isValidEmail(email.value)) {
+        markError(email, 'Ingresa un correo válido'); ok = false;
+      }
+      if (!whatsapp.value.trim()) {
+        markError(whatsapp, 'Ingresa tu WhatsApp'); ok = false;
+      }
+      if (!op.value) {
+        markError(op, 'Selecciona tu tipo de operación'); ok = false;
+      }
+      if (!prob.value) {
+        markError(prob, 'Selecciona tu problema principal'); ok = false;
       }
 
+      if (!ok) {
+        showToast('Completa los campos obligatorios.', true);
+        return;
+      }
+
+      // Build WhatsApp message
+      var web     = $('#f-web')     ? ($('#f-web').value     || '—') : '—';
+      var pedidos = $('#f-pedidos') ? ($('#f-pedidos').value || '—') : '—';
+      var skus    = $('#f-skus')    ? ($('#f-skus').value    || '—') : '—';
+      var plat    = $('#f-plataforma') ? ($('#f-plataforma').value || '—') : '—';
+
+      var msg = encodeURIComponent(
+        'Hola, quiero solicitar una demo de IZI Storage.
+
+' +
+        '▪ Nombre: '    + nombre.value.trim()   + '
+' +
+        '▪ Empresa: '   + empresa.value.trim()  + '
+' +
+        '▪ Email: '     + email.value.trim()    + '
+' +
+        '▪ WhatsApp: '  + whatsapp.value.trim() + '
+' +
+        '▪ Operación: ' + op.value              + '
+' +
+        '▪ Problema: '  + prob.value            + '
+' +
+        '▪ Web/IG: '    + web                   + '
+' +
+        '▪ Pedidos/mes: ' + pedidos             + '
+' +
+        '▪ SKUs: '      + skus                  + '
+' +
+        '▪ Plataforma: '+ plat
+      );
+
+      showToast('✓ Enviado. Te contactaremos pronto.');
+
+      // Disable button briefly
+      var btn = form.querySelector('.form-submit');
+      if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Enviado ✓';
+        setTimeout(function () {
+          btn.disabled = false;
+          btn.textContent = 'Solicitar demo';
+        }, 3000);
+      }
+
+      // Open WhatsApp
       setTimeout(function () {
-        resetForm(form);
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalText;
-        }
-        showToast(
-          'Solicitud recibida. El equipo de IZI Storage podrá contactarte para revisar tu operación.',
-          'success'
-        );
-      }, 800);
-    });
-  }
+        window.open('https://wa.me/' + WHATSAPP_PHONE + '?text=' + msg, '_blank', 'noopener,noreferrer');
+      }, 500);
 
-  function initWhatsAppButtons() {
-    document.querySelectorAll('[data-action="whatsapp"]').forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        var url = 'https://wa.me/' + WHATSAPP_PHONE + '?text=' + encodeURIComponent(WHATSAPP_MSG);
-        window.open(url, '_blank', 'noopener,noreferrer');
-        showToast(
-          'Te redirigimos a WhatsApp. El equipo estará disponible para orientarte.',
-          'success'
-        );
-      });
-
-      if (btn.getAttribute('role') === 'link') {
-        btn.addEventListener('keydown', function (e) {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            btn.click();
-          }
-        });
+      form.reset();
+      var optFields = $('#optional-fields');
+      var optBtn    = $('#toggle-optional');
+      if (optFields) {
+        optFields.setAttribute('aria-hidden', 'true');
+        optFields.style.maxHeight = '';
+      }
+      if (optBtn) {
+        optBtn.setAttribute('aria-expanded', 'false');
+        optBtn.textContent = '+ Datos adicionales (opcionales)';
       }
     });
   }
 
-  document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('form[data-form]').forEach(function (form) {
-      var type = form.getAttribute('data-form');
-      if (type === 'demo' || type === 'contact') {
-        initDemoForm(form);
-      }
-    });
-
-    initWhatsAppButtons();
+  /* ===== WHATSAPP LINKS ===== */
+  var waUrl = 'https://wa.me/' + WHATSAPP_PHONE + '?' + WHATSAPP_MSG;
+  $$('#hero-whatsapp, #whatsapp-float, a[href*="WHATSAPP_PHONE"]').forEach(function (el) {
+    el.href = waUrl;
   });
-})();
+
+  // Also update footer WA link
+  $$('a[href*="wa.me/WHATSAPP_PHONE"]').forEach(function (el) {
+    el.href = 'https://wa.me/' + WHATSAPP_PHONE;
+  });
+
+}());
