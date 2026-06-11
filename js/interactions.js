@@ -1,145 +1,114 @@
+/* interactions.js — IZI Storage v2
+   Nav scroll, mobile menu, reveal, FAQ, optional fields
+*/
 (function () {
   'use strict';
 
-  var prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* --- NAV SCROLL --- */
+  const nav = document.getElementById('site-nav');
+  const scrollProgress = document.getElementById('scroll-progress');
 
-  function initScrollProgress() {
-    var bar = document.getElementById('scroll-progress');
-    if (!bar) return;
-
-    function update() {
-      var scrollTop = window.scrollY || document.documentElement.scrollTop;
-      var docHeight = document.documentElement.scrollHeight - window.innerHeight;
-      var pct = docHeight > 0 ? (scrollTop / docHeight) * 100 : 0;
-      bar.style.width = pct + '%';
-    }
-
-    window.addEventListener('scroll', update, { passive: true });
-    update();
-  }
-
-  function initSmoothScroll() {
-    document.querySelectorAll('a[href^="#"]').forEach(function (link) {
-      link.addEventListener('click', function (e) {
-        var href = link.getAttribute('href');
-        if (href === '#') return;
-        var target = document.querySelector(href);
-        if (!target) return;
-        e.preventDefault();
-        var navHeight = 68;
-        var top = target.getBoundingClientRect().top + window.scrollY - navHeight;
-        if (prefersReducedMotion) {
-          window.scrollTo(0, top);
-        } else {
-          window.scrollTo({ top: top, behavior: 'smooth' });
-        }
-      });
-    });
-  }
-
-  function initScrollReveal() {
-    if (prefersReducedMotion) {
-      document.querySelectorAll('.scroll-reveal').forEach(function (el) {
-        el.classList.add('revealed');
-      });
-      return;
-    }
-
-    var observer = new IntersectionObserver(function (entries) {
-      entries.forEach(function (entry) {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('revealed');
-          observer.unobserve(entry.target);
-        }
-      });
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-
-    document.querySelectorAll('.scroll-reveal').forEach(function (el) {
-      observer.observe(el);
-    });
-  }
-
-  function initNav() {
-    var nav = document.getElementById('site-nav');
+  function onScroll() {
     if (!nav) return;
-
-    function update() {
-      if (window.scrollY > 24) {
-        nav.classList.add('scrolled');
-      } else {
-        nav.classList.remove('scrolled');
-      }
+    if (window.scrollY > 40) {
+      nav.classList.add('nav--scrolled');
+    } else {
+      nav.classList.remove('nav--scrolled');
     }
-
-    window.addEventListener('scroll', update, { passive: true });
-    update();
+    // Progress bar
+    if (scrollProgress) {
+      const docH = document.documentElement.scrollHeight - window.innerHeight;
+      const pct = docH > 0 ? (window.scrollY / docH) * 100 : 0;
+      scrollProgress.style.width = pct + '%';
+    }
   }
 
-  function initFAQ() {
-    var items = document.querySelectorAll('.faq-item');
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
 
-    items.forEach(function (item) {
-      var btn = item.querySelector('.faq-question');
-      var answer = item.querySelector('.faq-answer');
-      var answerInner = item.querySelector('.faq-answer-inner');
+  /* --- MOBILE MENU --- */
+  const toggle = document.querySelector('.nav-toggle');
+  const mobileNav = document.getElementById('nav-mobile');
 
-      if (!btn || !answer) return;
+  if (toggle && mobileNav) {
+    toggle.addEventListener('click', function () {
+      const open = toggle.getAttribute('aria-expanded') === 'true';
+      toggle.setAttribute('aria-expanded', String(!open));
+      mobileNav.setAttribute('aria-hidden', String(open));
+      mobileNav.style.display = open ? 'none' : 'block';
+    });
 
-      btn.setAttribute('aria-expanded', 'false');
+    // Close on link click
+    mobileNav.querySelectorAll('a').forEach(function (a) {
+      a.addEventListener('click', function () {
+        toggle.setAttribute('aria-expanded', 'false');
+        mobileNav.setAttribute('aria-hidden', 'true');
+        mobileNav.style.display = 'none';
+      });
+    });
+  }
 
-      btn.addEventListener('click', function () {
-        var isOpen = item.classList.contains('open');
+  /* --- SMOOTH SCROLL LINKS --- */
+  document.querySelectorAll('a[href^="#"]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      const target = document.querySelector(a.getAttribute('href'));
+      if (target) {
+        e.preventDefault();
+        const navH = nav ? nav.offsetHeight : 72;
+        const top = target.getBoundingClientRect().top + window.scrollY - navH - 16;
+        window.scrollTo({ top: Math.max(0, top), behavior: 'smooth' });
+      }
+    });
+  });
 
-        items.forEach(function (other) {
-          if (other !== item && other.classList.contains('open')) {
-            other.classList.remove('open');
-            var otherAnswer = other.querySelector('.faq-answer');
-            var otherBtn = other.querySelector('.faq-question');
-            if (otherAnswer) otherAnswer.style.maxHeight = '0';
-            if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+  /* --- REVEAL ON SCROLL (Intersection Observer) --- */
+  const revealEls = document.querySelectorAll(
+    '.reveal, .reveal-left, .reveal-right, .stagger-children'
+  );
+
+  if ('IntersectionObserver' in window && revealEls.length) {
+    const observer = new IntersectionObserver(
+      function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('revealed');
+            observer.unobserve(entry.target);
           }
         });
+      },
+      { threshold: 0.12, rootMargin: '0px 0px -40px 0px' }
+    );
+    revealEls.forEach(function (el) { observer.observe(el); });
+  } else {
+    // Fallback
+    revealEls.forEach(function (el) { el.classList.add('revealed'); });
+  }
 
-        if (isOpen) {
-          item.classList.remove('open');
-          answer.style.maxHeight = '0';
-          btn.setAttribute('aria-expanded', 'false');
-        } else {
-          item.classList.add('open');
-          answer.style.maxHeight = answer.scrollHeight + 'px';
-          btn.setAttribute('aria-expanded', 'true');
-        }
-      });
+  /* --- OPTIONAL FORM FIELDS TOGGLE --- */
+  const optBtn = document.getElementById('toggle-optional');
+  const optFields = document.getElementById('optional-fields');
+
+  if (optBtn && optFields) {
+    optBtn.addEventListener('click', function () {
+      const open = optBtn.getAttribute('aria-expanded') === 'true';
+      optBtn.setAttribute('aria-expanded', String(!open));
+      optFields.setAttribute('aria-hidden', String(open));
+      optBtn.textContent = open
+        ? '+ Datos adicionales (opcionales)'
+        : '− Datos adicionales (opcionales)';
     });
   }
 
-  function initBackToTop() {
-    var btn = document.getElementById('back-to-top');
-    if (!btn) return;
-
-    window.addEventListener('scroll', function () {
-      if (window.scrollY > 600) {
-        btn.classList.add('visible');
-      } else {
-        btn.classList.remove('visible');
-      }
-    }, { passive: true });
-
-    btn.addEventListener('click', function () {
-      if (prefersReducedMotion) {
-        window.scrollTo(0, 0);
-      } else {
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
-    });
+  /* --- NAV HEIGHT CSS VAR --- */
+  function setNavHeight() {
+    if (nav) {
+      document.documentElement.style.setProperty(
+        '--nav-height',
+        nav.offsetHeight + 'px'
+      );
+    }
   }
+  setNavHeight();
+  window.addEventListener('resize', setNavHeight, { passive: true });
 
-  document.addEventListener('DOMContentLoaded', function () {
-    initScrollProgress();
-    initSmoothScroll();
-    initScrollReveal();
-    initNav();
-    initFAQ();
-    initBackToTop();
-  });
-})();
+}());
